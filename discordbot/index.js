@@ -44,18 +44,27 @@ client.on('interactionCreate', async interaction => {
     var WeatherEmbed;
     getBiggestCityOnDepartment(zipcode_depart).then(cityInfo => {
         getWeatherDataFrom(cityInfo.codesPostaux[0]).then(weather => {
-            var emojiState;
+            var emojiState = ":question:";
             var stateText;
             if(weather.state == "Clouds") {
                 emojiState = ":cloud:";
-                stateText = "Nuageux";
+                weather.desc = "nuageux";
             }
             if(weather.state == "Clear") {
+                emojiState = ":sun_with_face:"
+                weather.desc = "ensoleillé"
+            }
+            if(weather.state == "Mist") {
                 emojiState = ":white_sun_small_cloud:"
+                weather.desc = "brumeux";
+            }
+            if(weather.state == "Rain") {
+                emojiState = ":cloud_rain:";
+                weather.desc = "pluvieux";
             }
             WeatherEmbed = new MessageEmbed()
                 .setColor('#0099ff')
-                .setTitle('Choisissez votre région')
+                .setTitle('Mona Météo :satellite:')
                 .setAuthor({ name: 'MonaBot', 'iconURL':'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' })
                 .setDescription('Laissez-moi vérifier en ' + depart_name + ` (${zipcode_depart}) Ville : ${cityInfo.nom}`)
                 .addField(`Température actuelle dans le ${zipcode_depart}`, `:thermometer: ${weather.temp}°C ressenti ${weather.feels_temp} °C\r\n`)
