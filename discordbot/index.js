@@ -74,7 +74,9 @@ client.on('interactionCreate', async interaction => {
         }
         // Weather embed 1
         var WeatherEmbed;
+        //first get the biggest city in the departement
         getBiggestCityOnDepartment(zipcode_depart).then(cityInfo => {
+            //get current weather
             getWeatherDataFrom(cityInfo.codesPostaux[0]).then(weather => {
                 var emojiState = ":question:";
                 var stateText;
@@ -94,19 +96,43 @@ client.on('interactionCreate', async interaction => {
                     emojiState = ":cloud_rain:";
                     weather.desc = "pluvieux";
                 }
-                WeatherEmbed = new MessageEmbed()
+
+                getForecastDataFrom(cityInfo.codesPostaux[0]).then(forecast => {
+                    var emojiStateForecast = ":question:";
+                    var stateText;
+                    if(forecast.state == "Clouds") {
+                        emojiStateForecast = ":cloud:";
+                        forecast.desc = "nuageux";
+                    }
+                    if(forecast.state == "Clear") {
+                        emojiStateForecast = ":sun_with_face:"
+                        forecast.desc = "ensoleillé"
+                    }
+                    if(forecast.state == "Mist") {
+                        emojiStateForecast = ":white_sun_small_cloud:"
+                        forecast.desc = "brumeux";
+                    }
+                    if(forecast.state == "Rain") {
+                        emojiStateForecast = ":cloud_rain:";
+                        forecast.desc = "pluvieux";
+                    }
+                    WeatherEmbed = new MessageEmbed()
                     .setColor('#0099ff')
                     .setTitle('Mona Météo :satellite:')
                     .setAuthor({ name: 'MonaBot', 'iconURL':'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' })
                     .setDescription('Laissez-moi vérifier en ' + depart_name + ` (${zipcode_depart}) Ville : ${cityInfo.nom}`)
                     .addField(`Température actuelle dans le ${zipcode_depart}`, `:thermometer: ${weather.temp}°C ressenti ${weather.feels_temp} °C\r\n`)
-                    .addField(`Météo actuelle dans le ${zipcode_depart}`, `Le temps est **${weather.desc}** ${emojiState}`)
+                    .addField(`Météo actuelle dans le ${zipcode_depart}`, `Le temps est **${weather.desc}** ${emojiState}\r\n\r\n`)
+                    .addField(`Prévisions dans 6h dans le ${zipcode_depart}`, `:thermometer: ${forecast.temp}°C ressenti ${forecast.feels_temp} °C\r\n`)
+                    .addField(`Prévisions dans 6h dans le ${zipcode_depart}`, `Le temps sera **${forecast.desc}** ${emojiStateForecast}`)
                     .setTimestamp()
                     .setFooter({ text: 'MonaBot météo fonctionne avec openweathermap.org et geo.api.gouv.fr', iconURL: 'https://openweathermap.org/themes/openweathermap/assets/img/mobile_app/android-app-top-banner.png' });
                     
                     interaction.reply({ embeds: [WeatherEmbed]});
             
                 })
+            })
+              
         })
 
 	} else if (commandName === 'pain') {
@@ -168,6 +194,34 @@ async function getWeatherDataFrom(depart_code) {
             weatherInDepartement.windspeed = json.wind.speed;
             weatherInDepartement.desc = json.weather[0].description;
             resolve(weatherInDepartement);
+
+        })
+    });
+    
+}
+
+
+async function getForecastDataFrom(depart_code) {
+    var forecastInDepartement = {
+        temp:"",
+        state:"",
+        windspeed:"",
+        feels_temp:"",
+        desc:""
+    };
+
+    return new Promise(resolve => {
+        fetch(`https://api.openweathermap.org/data/2.5/forecast?zip=${depart_code},fr&appid=${weather_api_key}&units=metric&lang=fr&cnt=2`)
+        .then(res => 
+            res.json()
+        )
+        .then(json => {
+            forecastInDepartement.temp = json.list[1].main.temp; //1 gets the weather in 6 hours
+            forecastInDepartement.feels_temp = json.list[1].main.feels_like;
+            forecastInDepartement.state = json.list[1].weather[0].main;
+            forecastInDepartement.windspeed = json.list[1].wind.speed;
+            forecastInDepartement.desc = json.list[1].weather[0].description;
+            resolve(forecastInDepartement);
 
         })
     });
