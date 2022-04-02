@@ -123,6 +123,7 @@ client.on('interactionCreate', async interaction => {
                     .setDescription('Laissez-moi vérifier en ' + depart_name + ` (${zipcode_depart}) Ville : ${cityInfo.nom}`)
                     .addField(`Température actuelle dans le ${zipcode_depart}`, `:thermometer: ${weather.temp}°C ressenti ${weather.feels_temp} °C\r\n`)
                     .addField(`Météo actuelle dans le ${zipcode_depart}`, `Le temps est **${weather.desc}** ${emojiState}\r\n\r\n`)
+                    .setImage('https://source.unsplash.com/1600x900?fields')
                     .addField(`Prévisions dans 6h dans le ${zipcode_depart}`, `:thermometer: ${forecast.temp}°C ressenti ${forecast.feels_temp} °C\r\n`)
                     .addField(`Prévisions dans 6h dans le ${zipcode_depart}`, `Le temps sera **${forecast.desc}** ${emojiStateForecast}`)
                     .setTimestamp()
