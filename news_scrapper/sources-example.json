@@ -1,0 +1,20 @@
+{
+    "sources":
+        {
+            "sourceid": {
+                "name":"Source Name",
+                "url": "https://sourcewebsite.com/link/to/rss/feed",
+                "articlesPath": [
+                    "rss",
+                    "channel",
+                    0,
+                    "item"
+                ],
+                "mode":"xml"
+            }
+        },
+        "sourcesToPull":[
+            "sourceid"
+        ]
+    
+}

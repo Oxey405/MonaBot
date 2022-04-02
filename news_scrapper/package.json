@@ -1,0 +1,16 @@
+{
+  "name": "mona_news-scrapper",
+  "version": "1.0.0",
+  "description": "A scrapping program that gets headlines from multiple websites",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Oxey405",
+  "license": "GPL-3.0",
+  "dependencies": {
+    "node-fetch": "^2.6.7",
+    "node-html-parser": "^5.3.3",
+    "xml2js": "^0.4.23"
+  }
+}

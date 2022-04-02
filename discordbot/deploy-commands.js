@@ -9,7 +9,9 @@ const commands = [
 		option.setName('zipcode')
 			.setDescription('Votre numéro de département.')
 			.setRequired(true)),
-	new SlashCommandBuilder().setName('user').setDescription('Replies with user info!'),
+	new SlashCommandBuilder().setName('pain').setDescription("Envoie du pain dans le chat"),
+	new SlashCommandBuilder().setName('actus').setDescription("Résumé des actus")
+
 ]
 	.map(command => command.toJSON());
 

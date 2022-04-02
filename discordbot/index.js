@@ -3,12 +3,38 @@ const { token, departements, weather_api_key } = require('./config.json');
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { REST } = require('@discordjs/rest');
 const { Routes } = require('discord-api-types/v9');
+const { scanFrom, Article } = require("../news_scrapper/scanner");
 const { Client, Intents, MessageActionRow, MessageButton, MessageEmbed, MessageSelectMenu, Emoji, Guild, BaseGuildEmoji } = require('discord.js');
 const fetch = require("node-fetch");
+const {sources, sourcesToPull} = require("./sources.json")
+
+var userCooldown = {};
+
+var articles = [];
 
 // Create a new client instance
 const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
-console.log(client.emojis.resolve("flag_fr"));
+
+async function getArticles() {
+    console.log("getting articles")
+    for (let i = 0; i < sourcesToPull.length; i++) {
+        const source = sources[sourcesToPull[i]];
+
+        console.log("pulling from : " + source.url);
+        var articlesFromSource = await scanFrom(source.url, undefined , source.name );
+        // for (let i = 0; i < articlesFromSource.length; i++) { deprecated because 1 article per source.
+            const article = articlesFromSource[i];
+            articles.push(article);
+
+        //}
+    }
+}
+getArticles();
+setInterval(() => {
+    articles = [];
+    getArticles();
+
+}, 3600000) // updates every hour
 
 
 // When the client is ready, run this code (only once)
@@ -20,16 +46,22 @@ client.on('interactionCreate', async interaction => {
 
     
 	const { commandName, componentType } = interaction;
-    if(componentType === 'SELECT_MENU') {
-        if(interaction.customId == "select_country") {
-            interaction.channel.send("");
-
-        }
-    }
 
 	if (commandName === 'mona') {
 		await interaction.reply({content:`Je suis là !`});
+
 	} else if (commandName === 'meteo') {
+        
+        if(userCooldown[interaction.user.id] != undefined) {
+            if(userCooldown[interaction.user.id] < Date.now()+60000) {
+                await interaction.reply("Veuillez attendre une minute avant de recommencer.")
+                return;
+            } else {
+                delete userCooldown[interaction.user.id];
+            }
+        } else {
+            userCooldown[interaction.user.id] = Date.now();
+        }
         var temp = "pas de température trouvée..."
         var zipcode_depart = interaction.options.getString('zipcode');
         var depart_name = departements[zipcode_depart];
@@ -40,49 +72,71 @@ client.on('interactionCreate', async interaction => {
             await interaction.reply("Ce département n'existe pas");
             return;
         }
-    // Weather embed 1
-    var WeatherEmbed;
-    getBiggestCityOnDepartment(zipcode_depart).then(cityInfo => {
-        getWeatherDataFrom(cityInfo.codesPostaux[0]).then(weather => {
-            var emojiState = ":question:";
-            var stateText;
-            if(weather.state == "Clouds") {
-                emojiState = ":cloud:";
-                weather.desc = "nuageux";
-            }
-            if(weather.state == "Clear") {
-                emojiState = ":sun_with_face:"
-                weather.desc = "ensoleillé"
-            }
-            if(weather.state == "Mist") {
-                emojiState = ":white_sun_small_cloud:"
-                weather.desc = "brumeux";
-            }
-            if(weather.state == "Rain") {
-                emojiState = ":cloud_rain:";
-                weather.desc = "pluvieux";
-            }
-            WeatherEmbed = new MessageEmbed()
-                .setColor('#0099ff')
-                .setTitle('Mona Météo :satellite:')
-                .setAuthor({ name: 'MonaBot', 'iconURL':'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' })
-                .setDescription('Laissez-moi vérifier en ' + depart_name + ` (${zipcode_depart}) Ville : ${cityInfo.nom}`)
-                .addField(`Température actuelle dans le ${zipcode_depart}`, `:thermometer: ${weather.temp}°C ressenti ${weather.feels_temp} °C\r\n`)
-                .addField(`Météo actuelle dans le ${zipcode_depart}`, `Le temps est **${weather.desc}** ${emojiState}`)
-                .setTimestamp()
-                .setFooter({ text: 'MonaBot météo fonctionne avec openweathermap.org et geo.api.gouv.fr', iconURL: 'https://openweathermap.org/themes/openweathermap/assets/img/mobile_app/android-app-top-banner.png' });
-                
-                interaction.reply({ embeds: [WeatherEmbed]});
-        
-            })
-    })
+        // Weather embed 1
+        var WeatherEmbed;
+        getBiggestCityOnDepartment(zipcode_depart).then(cityInfo => {
+            getWeatherDataFrom(cityInfo.codesPostaux[0]).then(weather => {
+                var emojiState = ":question:";
+                var stateText;
+                if(weather.state == "Clouds") {
+                    emojiState = ":cloud:";
+                    weather.desc = "nuageux";
+                }
+                if(weather.state == "Clear") {
+                    emojiState = ":sun_with_face:"
+                    weather.desc = "ensoleillé"
+                }
+                if(weather.state == "Mist") {
+                    emojiState = ":white_sun_small_cloud:"
+                    weather.desc = "brumeux";
+                }
+                if(weather.state == "Rain") {
+                    emojiState = ":cloud_rain:";
+                    weather.desc = "pluvieux";
+                }
+                WeatherEmbed = new MessageEmbed()
+                    .setColor('#0099ff')
+                    .setTitle('Mona Météo :satellite:')
+                    .setAuthor({ name: 'MonaBot', 'iconURL':'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' })
+                    .setDescription('Laissez-moi vérifier en ' + depart_name + ` (${zipcode_depart}) Ville : ${cityInfo.nom}`)
+                    .addField(`Température actuelle dans le ${zipcode_depart}`, `:thermometer: ${weather.temp}°C ressenti ${weather.feels_temp} °C\r\n`)
+                    .addField(`Météo actuelle dans le ${zipcode_depart}`, `Le temps est **${weather.desc}** ${emojiState}`)
+                    .setTimestamp()
+                    .setFooter({ text: 'MonaBot météo fonctionne avec openweathermap.org et geo.api.gouv.fr', iconURL: 'https://openweathermap.org/themes/openweathermap/assets/img/mobile_app/android-app-top-banner.png' });
+                    
+                    interaction.reply({ embeds: [WeatherEmbed]});
+            
+                })
+        })
 
-
-  
+	} else if (commandName === 'pain') {
+        await interaction.reply('Voilà du **PAIN**');
+        for (let i = 0; i < 4; i++) {
+            interaction.channel.send(":french_bread: :bread:");
+        }
         
-	} else if (commandName === 'user') {
-		await interaction.reply('User info.');
+
 	}
+    else if (commandName === 'actus') {
+
+        var actusEmbed = new MessageEmbed()
+        .setColor('#0099ff')
+        .setTitle('Mona Actus :newspaper:')
+        .setAuthor({ name: 'MonaBot', 'iconURL':'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' })
+        .setDescription('Dernières actualités en France (mise à jour toute les heures)')
+        .addField(`A propos des actualités`, `Mona a trouvé ${articles.length} articles provenant de Europe1, Franceinfo et Le Monde`)
+        .setTimestamp()
+        .setFooter({ text: 'MonaBot actus utilise différents flux RSS', iconURL: 'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' });
+
+        for (let i = 0; i < articles.length; i++) {
+            const currentArticle = articles[i];
+            //formattedArticle = `**${currentArticle.title}**(${currentArticle.author})\r\nLisez l'article complet : ${currentArticle.linkToArtic   le}`
+            actusEmbed.addField(`${currentArticle.title}\r\n(${currentArticle.author})`, 'Lisez l\'article complet sur ' + currentArticle.linkToArticle + "\r\n \r\n" +  currentArticle.description)
+        }
+      
+        interaction.reply({ embeds: [actusEmbed]});
+   
+    }
 });
 
 
@@ -101,14 +155,12 @@ async function getWeatherDataFrom(depart_code) {
         desc:""
     };
 
-    console.log("request : " + `https://api.openweathermap.org/data/2.5/weather?zip=${depart_code}000,fr&appid=${weather_api_key}&units=metric&lang=fr`)
     return new Promise(resolve => {
         fetch(`https://api.openweathermap.org/data/2.5/weather?zip=${depart_code},fr&appid=${weather_api_key}&units=metric&lang=fr`)
         .then(res => 
             res.json()
         )
         .then(json => {
-            console.log(json)
             weatherInDepartement.city = json.name;
             weatherInDepartement.temp = json.main.temp;
             weatherInDepartement.feels_temp = json.main.feels_like;
@@ -124,8 +176,6 @@ async function getWeatherDataFrom(depart_code) {
 
 async function getBiggestCityOnDepartment(depart_code) {
 
-    var city = "";
-    console.log("request : " + `https://geo.api.gouv.fr/departements/${depart_code}/communes`)
     return new Promise(resolve => {
         fetch(`https://geo.api.gouv.fr/departements/${depart_code}/communes`)
         .then(res => 

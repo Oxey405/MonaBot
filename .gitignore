@@ -1,3 +1,6 @@
 discordbot/node_modules
 discordbot/config.json
 discordbot/package-lock.json
+news_scrapper/node_modules
+news_scrapper/package-lock.json
+news_scrapper/sources.json
