@@ -34,13 +34,40 @@
                     "item"
                 ],
                 "mode":"xml"
+            },
+            "france24fr":{
+                "name":"France24 France",
+                "url": "https://www.france24.com/fr/france/rss",
+                "articlesPath":[
+                    "rss",
+                    "channel",
+                    0,
+                    "item"
+                ],
+                "mode":"xml"
+            },
+            "france24mo":{
+                "name":"France24 Monde",
+                "url": "https://www.france24.com/fr/rss",
+                "articlesPath":[
+                    "rss",
+                    "channel",
+                    0,
+                    "item"
+                ],
+                "mode":"xml"
             }
+
+            
+            
 
         },
         "sourcesToPull":[
             "lemonde",
             "franceinfo",
-            "europe1"
+            "europe1",
+            "france24fr",
+            "france24mo"
         ]
     
 }

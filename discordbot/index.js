@@ -124,14 +124,14 @@ client.on('interactionCreate', async interaction => {
         .setTitle('Mona Actus :newspaper:')
         .setAuthor({ name: 'MonaBot', 'iconURL':'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' })
         .setDescription('Dernières actualités en France (mise à jour toute les heures)')
-        .addField(`A propos des actualités`, `Mona a trouvé ${articles.length} articles provenant de Europe1, Franceinfo et Le Monde`)
+        .addField(`A propos des actualités`, `Mona a trouvé ${articles.length} articles provenant de flux RSS de sites d'actus français.\r\n Ces informations ne sont pas vérifiées par MonaBot !`)
         .setTimestamp()
         .setFooter({ text: 'MonaBot actus utilise différents flux RSS', iconURL: 'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' });
 
         for (let i = 0; i < articles.length; i++) {
             const currentArticle = articles[i];
             //formattedArticle = `**${currentArticle.title}**(${currentArticle.author})\r\nLisez l'article complet : ${currentArticle.linkToArtic   le}`
-            actusEmbed.addField(`${currentArticle.title}\r\n(${currentArticle.author})`, 'Lisez l\'article complet sur ' + currentArticle.linkToArticle + "\r\n \r\n" +  currentArticle.description)
+            actusEmbed.addField(`${currentArticle.title}\r\n(${currentArticle.author})`, 'Lisez l\'article complet sur ' + currentArticle.linkToArticle + "\r\n" +  currentArticle.description)
         }
       
         interaction.reply({ embeds: [actusEmbed]});
