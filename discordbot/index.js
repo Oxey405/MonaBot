@@ -1,4 +1,4 @@
-const { token, departements, weather_api_key } = require('./config.json');
+const { token, departements, weather_api_key, exchangerate_api_key } = require('./config.json');
 // Require the necessary discord.js classes
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { REST } = require('@discordjs/rest');
@@ -9,6 +9,7 @@ const fetch = require("node-fetch");
 const {sources, sourcesToPull} = require("./sources.json")
 const fs = require("fs");
 const os = require("os");
+var currenciesValues;
 
 const pathToDB = os.homedir() + "/monabot_sub_users.json";
 
@@ -36,11 +37,28 @@ async function getArticles() {
         //}
     }
 }
+
+function getValueOfCurrenciesFrom(currency_id) {
+    if(currency_id == undefined) {
+        currency_id == "EUR";
+    }
+    fetch(`https://v6.exchangerate-api.com/v6/${exchangerate_api_key}/latest/EUR`)
+    .then(res => 
+        res.json()
+    )
+    .then(json => {
+        var values = {USD: json.conversion_rates.USD, GBP: json.conversion_rates.GBP, JPY: json.conversion_rates.JPY, EUR: json.conversion_rates.EUR} ;
+       currenciesValues = values;
+    })
+//https://v6.exchangerate-api.com/v6/${apikey}/latest/EUR
+}
+
 getArticles();
 setInterval(() => {
     articles = [];
     try {
         getArticles();
+        getValueOfCurrenciesFrom('EUR');
 
     } catch (error) {
         console.log("error while pulling articles : " + error)
@@ -51,12 +69,13 @@ setInterval(() => {
 
 // When the client is ready, run this code (only once)
 client.once('ready', () => {
-    client.user.setActivity('les actus, météos et autres',  {type:"WATCHING"});
+    getValueOfCurrenciesFrom("EUR");
+    client.user.setActivity('les actus, météo et autres',  {type:"WATCHING", url:"https://oxey405.com/projects/monabot"});
 	console.log('Ready!');
     var lastDayDone = new Date().getUTCDay()-1;
     setInterval(() => {
         var date = new Date();
-        if(date.getUTCHours() == 4 && lastDayDone < date.getUTCDay()) { //4 because 4+2 = 6 and UTC+2 is the timezone of France.
+        if(date.getUTCHours() == 4 && lastDayDone < date.getUTCDay() && date.getUTCMinutes() < 5) { //4 because 4+2 = 6 and UTC+2 is the timezone of France.
            subscribedUsers.users.forEach((user) => {
                sendJournalTo(user);
 
@@ -309,6 +328,10 @@ client.on('interactionCreate', async interaction => {
         interaction.reply({content: "Je vous enverrais un message tout les matins à 6h (heure française)", ephemeral: true});
         addUserToNewspaperSubscribers(interaction.user);
     }
+    if(commandName === 'testjournal') {
+        sendJournalTo('431898733635174400');
+        await interaction.reply("testing...");
+    }
 });
 
 
@@ -431,6 +454,7 @@ function readAllSubscribedUsers() {
  */
 async function sendJournalTo(userID) {
     getArticles();
+    console.log(currenciesValues);
     var foundUser = await client.users.fetch(userID);
     var userDMChannel = await foundUser.createDM();
     var actusEmbed = new MessageEmbed()
@@ -438,12 +462,13 @@ async function sendJournalTo(userID) {
     .setTitle('Bonjour ! Vous avez reçu votre journal matinal ! :newspaper:')
     .setAuthor({ name: 'MonaBot', 'iconURL':'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' })
     .setDescription('Voici les dernières actualités...')
-    .addField(`A propos des actualités`, `Mona a trouvé ${articles.length} articles provenant de flux RSS de sites d'actus français.\r\n Ces informations ne sont pas vérifiées par MonaBot !`)
+    .addField(`A propos des actualités`, `Mona a trouvé ${articles.length/2} articles provenant de flux RSS de sites d'actus français.\r\nInformations non vérifiées par MonaBot !`)
+    // .addField('Autre informations', 'Si vous souhaitez connaitre la météo envoyez "!météo" suivi de votre numéro de département dans le chat !')
+    .addField('Taux de conversion des monnaies basé sur l\'Euro', `**Dollar américain (USD)** : ${currenciesValues.USD}€\r\n**Yen (JPY)** : ${currenciesValues.JPY}€\r\n**Livre Sterling (GBP)** : ${currenciesValues.GBP}€`)
     .setTimestamp()
-    .addField('Autre informations', 'Si vous souhaitez connaitre la météo envoyez "!météo" suivi de votre numéro de département dans le chat !')
     .setFooter({ text: 'MonaBot actus utilise différents flux RSS', iconURL: 'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' });
-
-    for (let i = 0; i < articles.length; i++) {
+    console.log(articles.length/2);
+    for (let i = 0; i < articles.length/2; i++) {
         const currentArticle = articles[i];
         //formattedArticle = `**${currentArticle.title}**(${currentArticle.author})\r\nLisez l'article complet : ${currentArticle.linkToArtic   le}`
         actusEmbed.addField(`${currentArticle.title}\r\n(${currentArticle.author})`, 'Lisez l\'article complet sur ' + currentArticle.linkToArticle + "\r\n" +  currentArticle.description)

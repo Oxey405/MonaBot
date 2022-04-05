@@ -65,8 +65,8 @@
         "sourcesToPull":[
             "lemonde",
             "franceinfo",
-            "europe1",
             "france24fr",
+            "europe1",
             "france24mo"
         ]
     
