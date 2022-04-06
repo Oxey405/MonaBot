@@ -78,6 +78,13 @@ client.once('ready', () => {
 
            })
         }
+        if(date.getUTCHours() > 20) {
+            client.user.setStatus('idle');
+        }
+        if(date.getUTCHours() > 4 && date.getUTCHours < 20) {
+            client.user.setStatus('online');
+
+        }
     }, 60000) // checks every minute (60000 ms)
 });
 
