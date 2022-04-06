@@ -67,7 +67,7 @@ setInterval(() => {
 // When the client is ready, run this code (only once)
 client.once('ready', () => {
     getValueOfCurrenciesFrom("EUR");
-    client.user.setActivity('les actus, météo et autres',  {type:"WATCHING", url:"https://oxey405.com/projects/monabot"});
+    client.user.setActivity('les actus, météo et autres', {type:"WATCHING", url:"https://oxey405.com/projects/monabot"});
 	console.log('Ready!');
     var lastDayDone = new Date().getUTCDay()-1;
     setInterval(() => {
@@ -78,10 +78,10 @@ client.once('ready', () => {
 
            })
         }
-        if(date.getUTCHours() > 20) {
+        if(date.getUTCHours() > 19) {
             client.user.setStatus('idle');
         }
-        if(date.getUTCHours() > 4 && date.getUTCHours < 20) {
+        if(date.getUTCHours() > 4 && date.getUTCHours() < 19) {
             client.user.setStatus('online');
 
         }
@@ -118,7 +118,7 @@ client.on('messageCreate', async message => {
                 delete userCooldown[message.author.id];
             }
         } else {
-            userCooldown[message.author.id] = Date.now()+6000;
+            userCooldown[message.author.id] = Date.now()+60000;
         }
         var temp = "pas de température trouvée..."
         var depart_name = departements[zipcode_depart];
@@ -217,7 +217,7 @@ client.on('interactionCreate', async interaction => {
                 delete userCooldown[interaction.user.id];
             }
         } else {
-            userCooldown[interaction.user.id] = Date.now()+6000;
+            userCooldown[interaction.user.id] = Date.now()+60000;
         }
         var temp = "pas de température trouvée..."
         var zipcode_depart = interaction.options.getString('zipcode');
