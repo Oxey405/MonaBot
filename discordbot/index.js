@@ -457,28 +457,38 @@ function readAllSubscribedUsers() {
  */
 async function sendJournalTo(userID) {
     getArticles();
+    console.log("getting journal ready");
     console.log(currenciesValues);
-    var foundUser = await client.users.fetch(userID);
-    var userDMChannel = await foundUser.createDM();
+    let foundUser = await client.users.fetch(userID);
+    let userDMChannel = await foundUser.createDM();
+    let newsInJournal = [];
+    console.log("creating the embed");
     var actusEmbed = new MessageEmbed()
     .setColor('#0099ff')
     .setTitle('Bonjour ! Vous avez reçu votre journal matinal ! :newspaper:')
     .setAuthor({ name: 'MonaBot', 'iconURL':'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' })
     .setDescription('Voici les dernières actualités...')
-    .addField(`A propos des actualités`, `Mona a trouvé ${articles.length/2} articles provenant de flux RSS de sites d'actus français.\r\nInformations non vérifiées par MonaBot !`)
+    .addField(`A propos des actualités`, `Mona a trouvé ${articles.length} articles provenant de flux RSS de sites d'actus français.\r\nInformations non vérifiées par MonaBot !`)
     // .addField('Autre informations', 'Si vous souhaitez connaitre la météo envoyez "!météo" suivi de votre numéro de département dans le chat !')
-    .addField('Taux de conversion des monnaies basé sur l\'Euro', `**Dollar américain (USD)** : ${currenciesValues.USD}€\r\n**Yen (JPY)** : ${currenciesValues.JPY}€\r\n**Livre Sterling (GBP)** : ${currenciesValues.GBP}€`)
+    .addField('Taux de conversion des monnaies basé sur l\'Euro', `**1 Dollar américain (USD)** = ${currenciesValues.USD}€\r\n**1 Yen (JPY)** = ${currenciesValues.JPY}€\r\n**1 Livre Sterling (GBP)** = ${currenciesValues.GBP}€`)
     .setTimestamp()
     .setFooter({ text: 'MonaBot actus utilise différents flux RSS', iconURL: 'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' });
-    console.log(articles.length/2);
-    for (let i = 0; i < articles.length/2; i++) {
-        const currentArticle = articles[i];
-        //formattedArticle = `**${currentArticle.title}**(${currentArticle.author})\r\nLisez l'article complet : ${currentArticle.linkToArtic   le}`
-        actusEmbed.addField(`${currentArticle.title}\r\n(${currentArticle.author})`, 'Lisez l\'article complet sur ' + currentArticle.linkToArticle + "\r\n" +  currentArticle.description)
-    }
-  
-    userDMChannel.send({ embeds: [actusEmbed]});
+    console.log(articles.length + " articles found");
+    console.log("adding articles...");
 
+    for (let i = 0; i < articles.length; i++) {
+        const currentArticle = articles[i];
+        if(newsInJournal.includes(currentArticle.title)) {
+            console.log("article already in news");
+         } else {
+             console.log('putting article in');
+            newsInJournal.push(currentArticle.title);
+            actusEmbed.addField(`${currentArticle.title}\r\n(${currentArticle.author})`, 'Lisez l\'article complet sur ' + currentArticle.linkToArticle + "\r\n" +  currentArticle.description)
+            
+       }
+    }
+    console.log("sending journal");
+    userDMChannel.send({ embeds: [actusEmbed]});
 }
 
 async function getRandomFieldsPhoto() {
