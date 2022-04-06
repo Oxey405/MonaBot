@@ -9,7 +9,7 @@ const commands = [
 		option.setName('zipcode')
 			.setDescription('Votre numéro de département.')
 			.setRequired(true)),
-	new SlashCommandBuilder().setName('pain').setDescription("Envoie du pain dans le chat (très français, oui !"),
+	// new SlashCommandBuilder().setName('pain').setDescription("Envoie du pain dans le chat (très français, oui !"),
 	new SlashCommandBuilder().setName('actus').setDescription("Résumé des actus venant de plusieurs sources."),
 	new SlashCommandBuilder().setName('journalmatinal').setDescription("Vous envoie un résumé en DM."),
 

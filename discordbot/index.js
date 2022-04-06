@@ -9,16 +9,13 @@ const fetch = require("node-fetch");
 const {sources, sourcesToPull} = require("./sources.json")
 const fs = require("fs");
 const os = require("os");
-var currenciesValues;
 
 const pathToDB = os.homedir() + "/monabot_sub_users.json";
 
-
-var userCooldown = {};
-
-var subscribedUsers = {};
-
-var articles = [];
+let currenciesValues;
+const userCooldown = {};
+let subscribedUsers = {};
+let articles = [];
 
 // Create a new client instance
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.DIRECT_MESSAGES, "DIRECT_MESSAGES"], partials: ["CHANNEL"] });
@@ -107,14 +104,14 @@ client.on('messageCreate', async message => {
 
         }
         if(userCooldown[message.author.id] != undefined) {
-            if(userCooldown[message.author.id] < Date.now()+60000) {
+            if(userCooldown[message.author.id] > Date.now()) {
                 await message.reply("Veuillez attendre une minute avant de recommencer.")
                 return;
             } else {
                 delete userCooldown[message.author.id];
             }
         } else {
-            userCooldown[message.author.id] = Date.now();
+            userCooldown[message.author.id] = Date.now()+6000;
         }
         var temp = "pas de température trouvée..."
         var depart_name = departements[zipcode_depart];
@@ -202,14 +199,15 @@ client.on('interactionCreate', async interaction => {
 	} else if (commandName === 'meteo') {
         
         if(userCooldown[interaction.user.id] != undefined) {
-            if(userCooldown[interaction.user.id] < Date.now()+60000) {
+
+            if(userCooldown[interaction.user.id] > Date.now()) {
                 await interaction.reply("Veuillez attendre une minute avant de recommencer.")
                 return;
             } else {
                 delete userCooldown[interaction.user.id];
             }
         } else {
-            userCooldown[interaction.user.id] = Date.now();
+            userCooldown[interaction.user.id] = Date.now()+6000;
         }
         var temp = "pas de température trouvée..."
         var zipcode_depart = interaction.options.getString('zipcode');
@@ -223,6 +221,8 @@ client.on('interactionCreate', async interaction => {
         }
         // Weather embed 1
         var WeatherEmbed;
+            
+            
         //first get the biggest city in the departement
         getBiggestCityOnDepartment(zipcode_depart).then(cityInfo => {
             //get current weather
@@ -265,21 +265,24 @@ client.on('interactionCreate', async interaction => {
                         emojiStateForecast = ":cloud_rain:";
                         forecast.desc = "pluvieux";
                     }
-                    WeatherEmbed = new MessageEmbed()
-                    .setColor('#0099ff')
-                    .setTitle('Mona Météo :satellite:')
-                    .setAuthor({ name: 'MonaBot', 'iconURL':'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' })
-                    .setDescription('Laissez-moi vérifier en ' + depart_name + ` (${zipcode_depart}) Ville : ${cityInfo.nom}`)
-                    .addField(`Température actuelle dans le ${zipcode_depart}`, `:thermometer: ${weather.temp}°C ressenti ${weather.feels_temp} °C\r\n`)
-                    .addField(`Météo actuelle dans le ${zipcode_depart}`, `Le temps est **${weather.desc}** ${emojiState}\r\n\r\n`)
-                    .setImage('https://source.unsplash.com/1600x900?fields')
-                    .addField(`Prévisions dans 6h dans le ${zipcode_depart}`, `:thermometer: ${forecast.temp}°C ressenti ${forecast.feels_temp} °C\r\n`)
-                    .addField(`Prévisions dans 6h dans le ${zipcode_depart}`, `Le temps sera **${forecast.desc}** ${emojiStateForecast}`)
-                    .setTimestamp()
-                    .setFooter({ text: 'MonaBot météo fonctionne avec openweathermap.org et geo.api.gouv.fr', iconURL: 'https://openweathermap.org/themes/openweathermap/assets/img/mobile_app/android-app-top-banner.png' });
-                    
-                    interaction.reply({ embeds: [WeatherEmbed]});
-            
+                    getRandomFieldsPhoto()
+                    .then(photoURL => {
+                        WeatherEmbed = new MessageEmbed()
+                        .setColor('#0099ff')
+                        .setTitle('Mona Météo :satellite:')
+                        .setAuthor({ name: 'MonaBot', 'iconURL':'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' })
+                        .setDescription('Laissez-moi vérifier en ' + depart_name + ` (${zipcode_depart}) Ville : ${cityInfo.nom}`)
+                        .addField(`Température actuelle dans le ${zipcode_depart}`, `:thermometer: ${weather.temp}°C ressenti ${weather.feels_temp} °C\r\n`)
+                        .addField(`Météo actuelle dans le ${zipcode_depart}`, `Le temps est **${weather.desc}** ${emojiState}\r\n\r\n`)
+                        .setImage(photoURL)
+                        .addField(`Prévisions dans 6h dans le ${zipcode_depart}`, `:thermometer: ${forecast.temp}°C ressenti ${forecast.feels_temp} °C\r\n`)
+                        .addField(`Prévisions dans 6h dans le ${zipcode_depart}`, `Le temps sera **${forecast.desc}** ${emojiStateForecast}`)
+                        .setTimestamp()
+                        .setFooter({ text: 'MonaBot météo fonctionne avec openweathermap.org et geo.api.gouv.fr', iconURL: 'https://openweathermap.org/themes/openweathermap/assets/img/mobile_app/android-app-top-banner.png' });
+                        
+                        interaction.reply({ embeds: [WeatherEmbed]});
+                    })
+                   
                 })
             })
               
@@ -478,3 +481,11 @@ async function sendJournalTo(userID) {
 
 }
 
+async function getRandomFieldsPhoto() {
+    return new Promise(async resolve => {
+        const response = await fetch('https://source.unsplash.com/800x600?fields');
+        resolve(response.url);
+
+    });
+
+}
