@@ -17,10 +17,10 @@ Find a list of the features avaible in Mona
 - [x] Use differents APIs for objectivity 
 
 ## Economy / Bourse
-- [ ] Give value of Euro, Dollar and Yen 
+- [x] Give value of Euro, Dollar and Yen 
 - [ ] Reports on Bitcoin and Dodgecoin value 
-- [ ] Find an API to do this job for us 
-- [ ] Complete visual feedback with embeds 
+- [x] Find an API to do this job for us 
+- [x] Complete visual feedback with embeds 
 
 ## Calendar / Agenda
 - [ ] Give a resume of all "public" events of this week 
