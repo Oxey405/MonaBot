@@ -148,7 +148,9 @@ client.on('messageCreate', async message => {
                 }
 
                 getForecastDataFrom(cityInfo.codesPostaux[0]).then(forecast => {
-                    var emojiStateForecast = ":question:";
+                    getRandomFieldsPhoto().then(photoURL => {
+
+                        var emojiStateForecast = ":question:";
                     var stateText;
                     if(forecast.state == "Clouds") {
                         emojiStateForecast = ":cloud:";
@@ -173,17 +175,18 @@ client.on('messageCreate', async message => {
                     .setDescription('Laissez-moi vérifier en ' + depart_name + ` (${zipcode_depart}) Ville : ${cityInfo.nom}`)
                     .addField(`Température actuelle dans le ${zipcode_depart}`, `:thermometer: ${weather.temp}°C ressenti ${weather.feels_temp} °C\r\n`)
                     .addField(`Météo actuelle dans le ${zipcode_depart}`, `Le temps est **${weather.desc}** ${emojiState}\r\n\r\n`)
-                    .setImage('https://source.unsplash.com/1600x900?fields')
+                    .setImage(photoURL)
                     .addField(`Prévisions dans 6h dans le ${zipcode_depart}`, `:thermometer: ${forecast.temp}°C ressenti ${forecast.feels_temp} °C\r\n`)
                     .addField(`Prévisions dans 6h dans le ${zipcode_depart}`, `Le temps sera **${forecast.desc}** ${emojiStateForecast}`)
                     .setTimestamp()
                     .setFooter({ text: 'MonaBot météo fonctionne avec openweathermap.org et geo.api.gouv.fr', iconURL: 'https://openweathermap.org/themes/openweathermap/assets/img/mobile_app/android-app-top-banner.png' });
                     
                     message.reply({ embeds: [WeatherEmbed]});
-            
+
+
+                    })
                 })
-            })
-              
+            })  
         })
     }
 })
