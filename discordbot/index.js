@@ -72,7 +72,7 @@ client.once('ready', () => {
     var lastDayDone = new Date().getUTCDay()-1;
     setInterval(() => {
         var date = new Date();
-        if(date.getUTCHours() == 4 && lastDayDone < date.getUTCDay() && date.getUTCMinutes() < 5) { //4 because 4+2 = 6 and UTC+2 is the timezone of France.
+        if(date.getUTCHours() == 4 && lastDayDone < date.getUTCDay() && date.getUTCMinutes() <= 1) { //4 because 4+2 = 6 and UTC+2 is the timezone of France.
            subscribedUsers.users.forEach((user) => {
                sendJournalTo(user);
 
@@ -480,7 +480,7 @@ async function sendJournalTo(userID) {
     .setDescription('Voici les dernières actualités...')
     .addField(`A propos des actualités`, `Mona a trouvé ${articles.length} articles provenant de flux RSS de sites d'actus français.\r\nInformations non vérifiées par MonaBot !`)
     // .addField('Autre informations', 'Si vous souhaitez connaitre la météo envoyez "!météo" suivi de votre numéro de département dans le chat !')
-    .addField('Taux de conversion des monnaies basé sur l\'Euro', `**1 Dollar américain (USD)** = ${currenciesValues.USD}€\r\n**1 Yen (JPY)** = ${currenciesValues.JPY}€\r\n**1 Livre Sterling (GBP)** = ${currenciesValues.GBP}€`)
+    .addField('Taux de conversion des monnaies basé sur l\'Euro', `1€ = ${currenciesValues.USD}$ **Dollar(s) américain (USD)**\r\n1€ = ${currenciesValues.JPY}¥ **Yen(s) (JPY)**\r\n1€ = ${currenciesValues.GBP}£ **Livre(s) sterlings (GBP)**`)
     .setTimestamp()
     .setFooter({ text: 'MonaBot actus utilise différents flux RSS', iconURL: 'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' });
     console.log(articles.length + " articles found");
