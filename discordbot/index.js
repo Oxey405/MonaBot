@@ -72,8 +72,10 @@ client.once('ready', () => {
     var lastDayDone = new Date().getUTCDay()-1;
     setInterval(() => {
         var date = new Date();
+        
         if(date.getUTCHours() == 4 && lastDayDone < date.getUTCDay() && date.getUTCMinutes() <= 1) { //4 because 4+2 = 6 and UTC+2 is the timezone of France.
-           subscribedUsers.users.forEach((user) => {
+            getArticles();
+            subscribedUsers.users.forEach((user) => {
                sendJournalTo(user);
 
            })
@@ -342,8 +344,12 @@ client.on('interactionCreate', async interaction => {
         addUserToNewspaperSubscribers(interaction.user);
     }
     if(commandName === 'testjournal') {
-        sendJournalTo('431898733635174400');
-        await interaction.reply("testing...");
+        getArticles();
+        subscribedUsers.users.forEach((user) => {
+           sendJournalTo(user);
+
+       })        
+       await interaction.reply("testing...");
     }
 });
 
@@ -466,7 +472,6 @@ function readAllSubscribedUsers() {
  * @param {String} userID 
  */
 async function sendJournalTo(userID) {
-    getArticles();
     console.log("getting journal ready");
     console.log(currenciesValues);
     let foundUser = await client.users.fetch(userID);
