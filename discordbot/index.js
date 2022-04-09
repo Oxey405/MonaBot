@@ -11,7 +11,7 @@ const fs = require("fs");
 const os = require("os");
 
 const pathToDB = os.homedir() + "/monabot_sub_users.json";
-
+    
 let currenciesValues;
 const userCooldown = {};
 let subscribedUsers = {};
@@ -87,7 +87,7 @@ client.once('ready', () => {
             client.user.setStatus('online');
 
         }
-    }, 60000) // checks every minute (60000 ms)
+    }, 61000) // checks every minute and 10secs (61000 ms)
 });
 
 client.on('messageCreate', async message => {
