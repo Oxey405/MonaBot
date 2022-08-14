@@ -18,7 +18,7 @@ Find a list of the features avaible in Mona
 
 ## Economy / Bourse
 - [x] Give value of Euro, Dollar and Yen 
-- [ ] Reports on Bitcoin and Dodgecoin value 
+- [x] Reports on Bitcoin and Dodgecoin value 
 - [x] Find an API to do this job for us 
 - [x] Complete visual feedback with embeds 
 
