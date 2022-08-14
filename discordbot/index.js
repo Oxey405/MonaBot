@@ -1,4 +1,5 @@
-const { token, departements, weather_api_key, exchangerate_api_key } = require('./config.json');
+const { token, weather_api_key, exchangerate_api_key } = require('./config.json');
+const { departements } = require('./departements-list.json');
 // Require the necessary discord.js classes
 const { SlashCommandBuilder } = require('@discordjs/builders');
 const { REST } = require('@discordjs/rest');
@@ -13,6 +14,7 @@ const os = require("os");
 const pathToDB = os.homedir() + "/monabot_sub_users.json";
     
 let currenciesValues;
+let cryptoValues = [];
 const userCooldown = {};
 let subscribedUsers = {};
 let articles = [];
@@ -20,6 +22,9 @@ let articles = [];
 // Create a new client instance
 const client = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.DIRECT_MESSAGES, "DIRECT_MESSAGES"], partials: ["CHANNEL"] });
 
+/**
+ * Get 5 articles from the news sources.
+ */
 async function getArticles() {
     console.log("getting articles")
     for (let i = 0; i < sourcesToPull.length; i++) {
@@ -35,27 +40,51 @@ async function getArticles() {
     }
 }
 
-function getValueOfCurrenciesFrom(currency_id) {
-    if(currency_id == undefined) {
-        currency_id == "EUR";
-    }
-    fetch(`https://v6.exchangerate-api.com/v6/${exchangerate_api_key}/latest/EUR`)
+/**
+ * Set the currencies values for USD, GBP, JPY and EUR.
+ * Default values are set to "EUR".
+ * @param {*} currency_id 
+ */
+function setValueOfCurrenciesFrom(currency_id = "EUR") {
+    
+    // fetch the currencies values from the exchangerate api
+    fetch(`https://v6.exchangerate-api.com/v6/${exchangerate_api_key}/latest/${currency_id}`)
     .then(res => 
         res.json()
     )
     .then(json => {
-        var values = {USD: json.conversion_rates.USD, GBP: json.conversion_rates.GBP, JPY: json.conversion_rates.JPY, EUR: json.conversion_rates.EUR} ;
-       currenciesValues = values;
+        // Set the currencies values in the currenciesValues variable.
+        currenciesValues = {USD: json.conversion_rates.USD, GBP: json.conversion_rates.GBP, JPY: json.conversion_rates.JPY, EUR: json.conversion_rates.EUR} ;
     })
-//https://v6.exchangerate-api.com/v6/${apikey}/latest/EUR
+    .catch(function(error) {
+        console.log(`Cant fetch currencies values from the exchangerate api : ${error.message}`);
+    }) ;
+
+
+    fetch(`https://api.coingecko.com/api/v3/coins/markets?vs_currency=EUR&ids=bitcoin,dogecoin&order=market_cap_desc&sparkline=false&price_change_percentage=24h`)
+    .then(res => 
+        res.json()
+    )
+    .then(listCoin => {
+        cryptoValues = [];
+        listCoin.forEach(coin => {
+            cryptoValues.push({"NAME": coin.name, "PRICE" : coin.current_price, "HIGH" : coin.high_24h, "LOW" : coin.low_24h, "PERCENTAGE" :coin.market_cap_change_percentage_24h});
+            //console.log(`name : ${coin.name}, price : ${coin.current_price}, high_24h : ${coin.high_24h}, low_24h : ${coin.low_24h}, market_cap_change_percentage_24h : ${coin.market_cap_change_percentage_24h}`);
+        });
+    })
+    .catch(function(error) {
+        console.log(`Cant fetch crypto values from coingecko api : ${error.message}`);
+    }) ;
 }
 
-getArticles();
+getArticles();// Get last articles on bot init.
+
+// Create loop to get last articles and currencies data every 1 hour.
 setInterval(() => {
     articles = [];
     try {
         getArticles();
-        getValueOfCurrenciesFrom('EUR');
+        setValueOfCurrenciesFrom('EUR');
 
     } catch (error) {
         console.log("error while pulling articles : " + error)
@@ -66,31 +95,39 @@ setInterval(() => {
 
 // When the client is ready, run this code (only once)
 client.once('ready', () => {
-    getValueOfCurrenciesFrom("EUR");
-    client.user.setActivity('les actus, météo et autres', {type:"WATCHING", url:"https://oxey405.com/projects/monabot"});
+    setValueOfCurrenciesFrom("EUR");
+
+    // Set the client user's activity
+    client.user.setActivity('les actus, météo et autres', { type: "WATCHING"});
+
 	console.log('Ready!');
     var lastDayDone = new Date().getUTCDay()-1;
+
+    // Loop for detect time and send daily journal to users.
     setInterval(() => {
-        var date = new Date();
-        
-        if(date.getUTCHours() == 4 && lastDayDone < date.getUTCDay() && date.getUTCMinutes() <= 1) { //4 because 4+2 = 6 and UTC+2 is the timezone of France.
-            getArticles();
+
+        var date = new Date(); //Get current date.
+        date.setHours(date.getHours() + 2); //Add 2 hours to current date to get UTC+2 date.
+
+        if(date.getUTCHours() == 6 && lastDayDone < date.getUTCDay() && date.getUTCMinutes() <= 1) { 
+            getArticles(); //Get last articles
+
+            //For each user subscribed to the bot, send them daily journal.
             subscribedUsers.users.forEach((user) => {
                sendJournalTo(user);
-
            })
         }
-        if(date.getUTCHours() > 19) {
-            client.user.setStatus('idle');
-        }
-        if(date.getUTCHours() > 4 && date.getUTCHours() < 19) {
-            client.user.setStatus('online');
 
-        }
+        //Set bot status every day from 21:00 to 06:00 idle
+        if(date.getUTCHours() > 21 || date.getUTCHours() <= 6) {
+            client.user.setStatus('idle');
+        } else client.user.setStatus('online'); //Set bot status to online
+
     }, 61000) // checks every minute and 10secs (61000 ms)
 });
 
 client.on('messageCreate', async message => {
+    console.log(message.content);
     if(message.content.startsWith('!meteo')) {
         if(message.content.replace("!meteo", "") == "") {
             await message.reply("Désolé, mais ce que vous avez envoyé n'est pas un nombre valide.")
@@ -182,11 +219,13 @@ client.on('messageCreate', async message => {
                     .setTitle('Mona Météo :satellite:')
                     .setAuthor({ name: 'MonaBot', 'iconURL':'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' })
                     .setDescription('Laissez-moi vérifier en ' + depart_name + ` (${zipcode_depart}) Ville : ${cityInfo.nom}`)
-                    .addField(`Température actuelle dans le ${zipcode_depart}`, `:thermometer: ${weather.temp}°C ressenti ${weather.feels_temp} °C\r\n`)
-                    .addField(`Météo actuelle dans le ${zipcode_depart}`, `Le temps est **${weather.desc}** ${emojiState}\r\n\r\n`)
+                    .addFields(
+                        { name: `Température actuelle dans le ${zipcode_depart}`, value : `:thermometer: ${weather.temp}°C ressenti ${weather.feels_temp} °C\r\n`},
+                        { name: `Météo actuelle dans le ${zipcode_depart}`, value : `Le temps est **${weather.desc}** ${emojiState}\r\n\r\n`})
                     .setImage(photoURL)
-                    .addField(`Prévisions dans 6h dans le ${zipcode_depart}`, `:thermometer: ${forecast.temp}°C ressenti ${forecast.feels_temp} °C\r\n`)
-                    .addField(`Prévisions dans 6h dans le ${zipcode_depart}`, `Le temps sera **${forecast.desc}** ${emojiStateForecast}`)
+                    .addFields(
+                        { name: `Prévisions dans 6h dans le ${zipcode_depart}`, value : `:thermometer: ${forecast.temp}°C ressenti ${forecast.feels_temp} °C\r\n`},
+                        { name: `Prévisions dans 6h dans le ${zipcode_depart}`, value : `Le temps sera **${forecast.desc}** ${emojiStateForecast}`})
                     .setTimestamp()
                     .setFooter({ text: 'MonaBot météo fonctionne avec openweathermap.org et geo.api.gouv.fr', iconURL: 'https://openweathermap.org/themes/openweathermap/assets/img/mobile_app/android-app-top-banner.png' });
                     
@@ -202,7 +241,6 @@ client.on('messageCreate', async message => {
 
 client.on('interactionCreate', async interaction => {
 
-    
 	const { commandName, componentType } = interaction;
 
 	if (commandName === 'mona') {
@@ -284,11 +322,13 @@ client.on('interactionCreate', async interaction => {
                         .setTitle('Mona Météo :satellite:')
                         .setAuthor({ name: 'MonaBot', 'iconURL':'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' })
                         .setDescription('Laissez-moi vérifier en ' + depart_name + ` (${zipcode_depart}) Ville : ${cityInfo.nom}`)
-                        .addField(`Température actuelle dans le ${zipcode_depart}`, `:thermometer: ${weather.temp}°C ressenti ${weather.feels_temp} °C\r\n`)
-                        .addField(`Météo actuelle dans le ${zipcode_depart}`, `Le temps est **${weather.desc}** ${emojiState}\r\n\r\n`)
+                        .addFields(
+                            { name: `Température actuelle dans le ${zipcode_depart}`, value : `:thermometer: ${weather.temp}°C ressenti ${weather.feels_temp} °C\r\n`},
+                            { name: `Météo actuelle dans le ${zipcode_depart}`, value : `Le temps est **${weather.desc}** ${emojiState}\r\n\r\n`})
                         .setImage(photoURL)
-                        .addField(`Prévisions dans 6h dans le ${zipcode_depart}`, `:thermometer: ${forecast.temp}°C ressenti ${forecast.feels_temp} °C\r\n`)
-                        .addField(`Prévisions dans 6h dans le ${zipcode_depart}`, `Le temps sera **${forecast.desc}** ${emojiStateForecast}`)
+                        .addFields(
+                            { name: `Prévisions dans 6h dans le ${zipcode_depart}`, value : `:thermometer: ${forecast.temp}°C ressenti ${forecast.feels_temp} °C\r\n`},
+                            { name: `Prévisions dans 6h dans le ${zipcode_depart}`, value : `Le temps sera **${forecast.desc}** ${emojiStateForecast}`})
                         .setTimestamp()
                         .setFooter({ text: 'MonaBot météo fonctionne avec openweathermap.org et geo.api.gouv.fr', iconURL: 'https://openweathermap.org/themes/openweathermap/assets/img/mobile_app/android-app-top-banner.png' });
                         
@@ -315,14 +355,14 @@ client.on('interactionCreate', async interaction => {
         .setTitle('Mona Actus :newspaper:')
         .setAuthor({ name: 'MonaBot', 'iconURL':'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' })
         .setDescription('Dernières actualités en France (mise à jour toute les heures)')
-        .addField(`A propos des actualités`, `Mona a trouvé ${articles.length} articles provenant de flux RSS de sites d'actus français.\r\n Ces informations ne sont pas vérifiées par MonaBot !`)
+        .addFields({ name: `A propos des actualités`, value : `Mona a trouvé ${articles.length} articles provenant de flux RSS de sites d'actus français.\r\n Ces informations ne sont pas vérifiées par MonaBot !`})
         .setTimestamp()
         .setFooter({ text: 'MonaBot actus utilise différents flux RSS', iconURL: 'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' });
 
         for (let i = 0; i < articles.length; i++) {
             const currentArticle = articles[i];
             //formattedArticle = `**${currentArticle.title}**(${currentArticle.author})\r\nLisez l'article complet : ${currentArticle.linkToArtic   le}`
-            actusEmbed.addField(`${currentArticle.title}\r\n(${currentArticle.author})`, 'Lisez l\'article complet sur ' + currentArticle.linkToArticle + "\r\n" +  currentArticle.description)
+            actusEmbed.addFields({ name: `${currentArticle.title}\r\n(${currentArticle.author})`, value : 'Lisez l\'article complet sur ' + currentArticle.linkToArticle + "\r\n" +  currentArticle.description});
         }
       
         interaction.reply({ embeds: [actusEmbed]});
@@ -334,7 +374,7 @@ client.on('interactionCreate', async interaction => {
         .setTitle('Journal matinal Mona activé ! :newspaper:')
         .setAuthor({name: 'MonaBot', 'iconURL': 'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512'})
         .setDescription('Vous avez activé le journal matinal MonaBot ! Vous receverez le journal matinal tous les jours à 6 heures.')
-        .addField('Comment ça marche ?', 'Tous les matins à 6h, je vous enverrais la météo du jour,\r\nles nouvelles venant de plusieurs sources et\r\ndes informations financières telle que la bourse.')
+        .addFields({ name: 'Comment ça marche ?', value : 'Tous les matins à 6h, je vous enverrais la météo du jour,\r\nles nouvelles venant de plusieurs sources et\r\ndes informations financières telle que la bourse.'})
         .setTimestamp()
         .setFooter({text: 'MonaBot journal matinal', iconURL:'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512'})
        
@@ -474,18 +514,29 @@ function readAllSubscribedUsers() {
 async function sendJournalTo(userID) {
     console.log("getting journal ready");
     console.log(currenciesValues);
+    console.log(cryptoValues);
     let foundUser = await client.users.fetch(userID);
     let userDMChannel = await foundUser.createDM();
     let newsInJournal = [];
+
     console.log("creating the embed");
+    let stringCrypto = "";
+    cryptoValues.forEach((crypto) => {
+        console.log(crypto);
+        stringCrypto += `**${crypto.NAME}** \r **Prix** = ${crypto.PRICE}$ \r ${crypto.PERCENTAGE}% \r Haut = ${crypto.HIGH} \r Bas = ${crypto.LOW}\r\n`
+    })
+    console.log(stringCrypto);
     var actusEmbed = new MessageEmbed()
     .setColor('#0099ff')
     .setTitle('Bonjour ! Vous avez reçu votre journal matinal ! :newspaper:')
     .setAuthor({ name: 'MonaBot', 'iconURL':'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' })
     .setDescription('Voici les dernières actualités...')
-    .addField(`A propos des actualités`, `Mona a trouvé ${articles.length} articles provenant de flux RSS de sites d'actus français.\r\nInformations non vérifiées par MonaBot !`)
-    // .addField('Autre informations', 'Si vous souhaitez connaitre la météo envoyez "!météo" suivi de votre numéro de département dans le chat !')
-    .addField('Taux de conversion des monnaies basé sur l\'Euro', `1€ = ${currenciesValues.USD}$ **Dollar(s) américain (USD)**\r\n1€ = ${currenciesValues.JPY}¥ **Yen(s) (JPY)**\r\n1€ = ${currenciesValues.GBP}£ **Livre(s) sterlings (GBP)**`)
+    .addFields(
+        { name: `A propos des actualités`, value: `Mona a trouvé ${articles.length} articles provenant de flux RSS de sites d'actus français.\r\nInformations non vérifiées par MonaBot !` },
+        //{ name: 'Autre informations', value: 'Si vous souhaitez connaitre la météo envoyez "!météo" suivi de votre numéro de département dans le chat !' },
+        { name: `Taux de conversion des monnaies basé sur l'Euro`, value: `1€ = ${currenciesValues.USD}$ **Dollar(s) américain (USD)**\r\n1€ = ${currenciesValues.JPY}¥ **Yen(s) (JPY)**\r\n1€ = ${currenciesValues.GBP}£ **Livre(s) sterlings (GBP)**` },
+        { name: `Actualité des cryptomonaies`, value: stringCrypto.toString() }
+    )
     .setTimestamp()
     .setFooter({ text: 'MonaBot actus utilise différents flux RSS', iconURL: 'https://cdn.discordapp.com/app-icons/958405000101519372/2f4f565eb1a8418f0b95deb28776723b.png?size=512' });
     console.log(articles.length + " articles found");
@@ -498,7 +549,9 @@ async function sendJournalTo(userID) {
          } else {
              console.log('putting article in');
             newsInJournal.push(currentArticle.title);
-            actusEmbed.addField(`${currentArticle.title}\r\n(${currentArticle.author})`, 'Lisez l\'article complet sur ' + currentArticle.linkToArticle + "\r\n" +  currentArticle.description)
+            actusEmbed.addFields(
+                { name: `${currentArticle.title}\r\n(${currentArticle.author})`, value: 'Lisez l\'article complet sur ' + currentArticle.linkToArticle + "\r\n" +  currentArticle.description}
+            )
             
        }
     }
